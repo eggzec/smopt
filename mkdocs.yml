@@ -51,8 +51,8 @@ theme:
         name: Switch to light mode
 
   # Logo and favicon
-  favicon: assets/images/smopt.ico
-  logo: assets/images/smopt.png
+  favicon: assets/images/smopt-icon.svg
+  logo: assets/images/smopt-icon.svg
 
   # Font configuration
   font:

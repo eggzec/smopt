@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="docs/assets/images/smopt-banner.png" alt="smopt" width="720">
-</p>
+![smopt](https://raw.githubusercontent.com/eggzec/smopt/master/docs/assets/images/smopt-banner.png)
 
 # smopt
 

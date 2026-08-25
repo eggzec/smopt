@@ -1,6 +1,6 @@
-![smopt](assets/images/smopt-banner.png){ .smopt-banner }
-
 # smopt
+
+![smopt](https://raw.githubusercontent.com/eggzec/smopt/master/docs/assets/images/smopt-banner.png)
 
 **Stiefel manifold optimization, with all numerics in Fortran 77**
 
