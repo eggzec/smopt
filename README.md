@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/images/smopt-banner.png" alt="smopt" width="720">
+</p>
+
 # smopt
 
 **Stiefel manifold optimization, with all numerics in Fortran 77**
