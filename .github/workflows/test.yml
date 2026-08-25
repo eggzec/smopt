@@ -78,23 +78,6 @@ jobs:
       - name: Install project
         run: uv run bin/build.py install
 
-      # TEMPORARY diagnostic: identify what the Windows extension is
-      # actually missing at import time. Removed once fixed.
-      - name: Diagnose Windows extension (temporary)
-        if: runner.os == 'Windows'
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -x
-          uv run --no-sync python -c "import sys; print(sys.executable); print(sys.version)"
-          PYD=$(uv run --no-sync python -c "import glob,os,sysconfig; print(next(iter(glob.glob(os.path.join(sysconfig.get_paths()['purelib'],'smopt','_smopt*.pyd'))),''))")
-          echo "PYD=$PYD"
-          ls -la "$(dirname "$PYD")" || true
-          which gfortran gcc cc objdump || true
-          gfortran --version | head -1 || true
-          objdump -p "$PYD" | grep -i "DLL Name" || true
-          uv run --no-sync python -c "import ctypes,glob,os,sysconfig; p=next(iter(glob.glob(os.path.join(sysconfig.get_paths()['purelib'],'smopt','_smopt*.pyd'))),None); print('loading',p); ctypes.CDLL(p); print('CDLL OK')" || true
-
       - name: Run Pytest
         run: uv run --no-sync pytest -v -n auto --cov --cov-report=xml
 
