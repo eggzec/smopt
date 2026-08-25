@@ -2,7 +2,7 @@
 
 ![smopt](https://raw.githubusercontent.com/eggzec/smopt/master/docs/assets/images/smopt-banner.png)
 
-**Stiefel manifold optimization, with all numerics in Fortran 77**
+**Stiefel Manifold Optimization: Penalty-Free First-Order Solvers**
 
 `smopt` minimizes a smooth function, optionally plus a nonsmooth
 regularizer, over the set of matrices with orthonormal columns:

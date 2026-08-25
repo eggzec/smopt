@@ -2,7 +2,7 @@
 
 # smopt
 
-**Stiefel manifold optimization, with all numerics in Fortran 77**
+**Stiefel Manifold Optimization: Penalty-Free First-Order Solvers**
 
 [![Tests](https://github.com/eggzec/smopt/actions/workflows/test.yml/badge.svg)](https://github.com/eggzec/smopt/actions/workflows/test.yml)
 [![Documentation](https://github.com/eggzec/smopt/actions/workflows/docs.yml/badge.svg)](https://github.com/eggzec/smopt/actions/workflows/docs.yml)
