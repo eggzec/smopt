@@ -10,7 +10,7 @@ build-backend = "mesonpy"
 [project]
 name = "smopt"
 dynamic = ["version"]
-description = "Stiefel manifold optimization with all numerics in Fortran 77"
+description = "Stiefel Manifold Optimization: Penalty-Free First-Order Solvers"
 authors = [
     { name = "Saud Zahir", email = "m.saud.zahir@gmail.com" },
 ]
@@ -24,8 +24,6 @@ keywords = [
     "optimization",
     "manifold optimization",
     "Stiefel manifold",
-    "fortran",
-    "f2py"
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -56,7 +54,6 @@ requires-python = ">=3.10"
 homepage = "https://eggzec.github.io/smopt/"
 documentation = "https://eggzec.github.io/smopt/"
 source = "https://github.com/eggzec/smopt"
-changelog = "https://eggzec.github.io/smopt/changelog/"
 releasenotes = "https://github.com/eggzec/smopt/releases/latest"
 issues = "https://github.com/eggzec/smopt/issues"
 
