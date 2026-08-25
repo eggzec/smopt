@@ -10,7 +10,8 @@ class Stiefel:
     r"""The Stiefel manifold :math:`\{X \in R^{n \times p} : X^T X = I_p\}`.
 
     The object carries the dimensions and exposes the maps the solvers
-    need. Every one of them is evaluated by the Fortran 77 core.
+    need. Every one of them is evaluated by the Fortran 77 core, and each
+    is named after the symbol it carries in the theory documentation.
 
     Args:
         n: Number of rows of the iterate.
@@ -23,9 +24,9 @@ class Stiefel:
     Examples:
         >>> import numpy as np
         >>> from smopt import Stiefel
-        >>> M = Stiefel(4, 2)
-        >>> X = M.Init_point(np.eye(4, 2))
-        >>> bool(M.Feas_eval(X) < 1e-12)
+        >>> manifold = Stiefel(4, 2)
+        >>> x = manifold.init_point(np.eye(4, 2))
+        >>> bool(manifold.feas_eval(x) < 1e-12)
         True
     """
 
@@ -41,100 +42,100 @@ class Stiefel:
         self._p = p
         self.dim = n * p
 
-    def _mat(self, x: Matrix, name: str = "X") -> Matrix:
+    def _mat(self, x: Matrix, name: str = "x") -> Matrix:
         return as_matrix(x, self._n, self._p, name)
 
     def _sq(self, m: Matrix, name: str) -> Matrix:
         return as_matrix(m, self._p, self._p, name)
 
-    def Phi(self, M: Matrix) -> Matrix:  # noqa: N802, N803
+    def phi(self, m: Matrix) -> Matrix:
         """Symmetrize a square matrix.
 
         Args:
-            M: A ``(p, p)`` matrix.
+            m: A ``(p, p)`` matrix.
 
         Returns:
-            ``(M + M.T) / 2``.
+            ``(m + m.T) / 2``.
         """
-        return _smopt.smsymm(self._sq(M, "M"))
+        return _smopt.smsymm(self._sq(m, "m"))
 
-    def A(self, X: Matrix) -> Matrix:  # noqa: N802, N803
+    def a(self, x: Matrix) -> Matrix:
         """Pull a point back towards the manifold.
 
         Close to the manifold a second order expansion is used, and the
-        exact map ``X (X^T X + I)^{-1} 2`` otherwise.
+        exact map ``x ((x^T x + I) / 2)^-1`` otherwise.
 
         Args:
-            X: An ``(n, p)`` matrix.
+            x: An ``(n, p)`` matrix.
 
         Returns:
             The restored point.
         """
-        return _smopt.smamap(self._mat(X))
+        return _smopt.smamap(self._mat(x))
 
-    def JA(self, X: Matrix, G: Matrix) -> Matrix:  # noqa: N802, N803
+    def ja(self, x: Matrix, g: Matrix) -> Matrix:
         """Project a Euclidean gradient onto the search direction.
 
         Args:
-            X: An ``(n, p)`` matrix.
-            G: The Euclidean gradient at ``X``.
+            x: An ``(n, p)`` matrix.
+            g: The Euclidean gradient at ``x``.
 
         Returns:
-            ``G - X Phi(X^T G)``.
+            ``g - x phi(x^T g)``.
         """
-        return _smopt.smja(self._mat(X), self._mat(G, "G"))
+        return _smopt.smja(self._mat(x), self._mat(g, "g"))
 
-    def JC(self, X: Matrix, Lambda: Matrix) -> Matrix:  # noqa: N802, N803
+    def jc(self, x: Matrix, lam: Matrix) -> Matrix:
         """Apply the constraint Jacobian to a multiplier.
 
         Args:
-            X: An ``(n, p)`` matrix.
-            Lambda: A ``(p, p)`` multiplier.
+            x: An ``(n, p)`` matrix.
+            lam: A ``(p, p)`` multiplier.
 
         Returns:
-            ``X Phi(Lambda)``.
+            ``x phi(lam)``.
         """
-        return _smopt.smjc(self._mat(X), self._sq(Lambda, "Lambda"))
+        return _smopt.smjc(self._mat(x), self._sq(lam, "lam"))
 
-    def JC_transpose(self, X: Matrix, D: Matrix) -> Matrix:  # noqa: N802, N803
+    def jc_transpose(self, x: Matrix, d: Matrix) -> Matrix:
         """Apply the adjoint of the constraint Jacobian to a direction.
 
         Args:
-            X: An ``(n, p)`` matrix.
-            D: An ``(n, p)`` direction.
+            x: An ``(n, p)`` matrix.
+            d: An ``(n, p)`` direction.
 
         Returns:
-            ``Phi(X^T D)``.
+            ``phi(x^T d)``.
         """
-        return _smopt.smjct(self._mat(X), self._mat(D, "D"))
+        return _smopt.smjct(self._mat(x), self._mat(d, "d"))
 
-    def C(self, X: Matrix) -> Matrix:  # noqa: N802, N803
+    def c(self, x: Matrix) -> Matrix:
         """Evaluate the constraint violation.
 
         Args:
-            X: An ``(n, p)`` matrix.
+            x: An ``(n, p)`` matrix.
 
         Returns:
-            ``X^T X - I``.
+            ``x^T x - I``.
         """
-        return _smopt.smcmap(self._mat(X))
+        return _smopt.smcmap(self._mat(x))
 
-    def Feas_eval(self, X: Matrix) -> float:  # noqa: N802, N803
+    def feas_eval(self, x: Matrix) -> float:
         """Measure how far a point sits from the manifold.
 
         Args:
-            X: An ``(n, p)`` matrix.
+            x: An ``(n, p)`` matrix.
 
         Returns:
-            The Frobenius norm of ``X^T X - I``.
+            The Frobenius norm of ``x^T x - I``.
         """
-        return float(_smopt.smfeas(self._mat(X)))
+        return float(_smopt.smfeas(self._mat(x)))
 
-    def Init_point(self, Xinit: Matrix | None = None) -> Matrix:  # noqa: N802, N803
+    def init_point(self, xinit: Matrix | None = None) -> Matrix:
         """Produce a feasible starting point.
 
         Args:
-            Xinit: Optional starting matrix. A standard normal matrix is
+            xinit: Optional starting matrix. A standard normal matrix is
                 drawn when it is omitted. Either way the result is
                 orthonormalized unless it is already feasible.
 
@@ -143,22 +144,22 @@ class Stiefel:
         """
         start = (
             np.random.randn(self._n, self._p)
-            if Xinit is None
-            else self._mat(Xinit, "Xinit")
+            if xinit is None
+            else self._mat(xinit, "xinit")
         )
         return _smopt.sminit(start)
 
-    def Post_process(self, X: Matrix) -> Matrix:  # noqa: N802, N803
+    def post_process(self, x: Matrix) -> Matrix:
         """Round a point onto the manifold.
 
         Args:
-            X: An ``(n, p)`` matrix.
+            x: An ``(n, p)`` matrix.
 
         Returns:
-            The orthogonal polar factor ``U V^T`` of ``X``, where
-            ``X = U S V^T`` is a thin singular value decomposition.
+            The orthogonal polar factor ``u v^T`` of ``x``, where
+            ``x = u s v^T`` is a thin singular value decomposition.
         """
-        return _smopt.smpost(self._mat(X))
+        return _smopt.smpost(self._mat(x))
 
 
 __all__: list[str] = ["Stiefel"]

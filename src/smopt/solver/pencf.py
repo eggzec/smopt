@@ -22,8 +22,8 @@ _PERIOD = 20
 _AUTO_BETA = -1.0
 
 
-def PenCF(  # noqa: N802
-    Xinit: Matrix,  # noqa: N803
+def pencf(
+    xinit: Matrix,
     obj_fun: ObjFun,
     manifold: Stiefel,
     beta: float | None = None,
@@ -35,14 +35,14 @@ def PenCF(  # noqa: N802
 ) -> tuple[Matrix, dict[str, object]]:
     r"""Minimize a smooth objective with a constraint dissolving penalty.
 
-    The search direction adds ``beta JC(X, C(X))`` to the projected
+    The search direction adds ``beta jc(x, c(x))`` to the projected
     gradient, and feasibility is restored only once the iterate has
     drifted appreciably off the manifold.
 
     Args:
-        Xinit: Starting point. A random feasible point is drawn when it
+        xinit: Starting point. A random feasible point is drawn when it
             is ``None``.
-        obj_fun: Callable mapping ``X`` to ``(fval, grad)``, where
+        obj_fun: Callable mapping ``x`` to ``(fval, grad)``, where
             ``grad`` is the Euclidean gradient.
         manifold: The :class:`~smopt.manifold.Stiefel` instance fixing
             the dimensions.
@@ -63,28 +63,28 @@ def PenCF(  # noqa: N802
 
     Examples:
         >>> import numpy as np
-        >>> from smopt import PenCF, Stiefel
-        >>> M = Stiefel(6, 2)
-        >>> A = np.diag([5.0, 4.0, 3.0, 2.0, 1.0, 0.0])
-        >>> def obj(X):
-        ...     return float(np.sum(X * (A @ X))), 2.0 * (A @ X)
-        >>> X0 = np.arange(12.0).reshape(6, 2)
-        >>> X, out = PenCF(X0, obj, M, verbosity=0)
-        >>> bool(M.Feas_eval(X) < 1e-8)
+        >>> from smopt import Stiefel, pencf
+        >>> manifold = Stiefel(6, 2)
+        >>> a = np.diag([5.0, 4.0, 3.0, 2.0, 1.0, 0.0])
+        >>> def obj(x):
+        ...     return float(np.sum(x * (a @ x))), 2.0 * (a @ x)
+        >>> x0 = np.arange(12.0).reshape(6, 2)
+        >>> x, out = pencf(x0, obj, manifold, verbosity=0)
+        >>> bool(manifold.feas_eval(x) < 1e-8)
         True
     """
     maxit = check_maxit(maxit)
     n, p = manifold._n, manifold._p
-    # A caller supplied starting point is used as given; only the
-    # default one is drawn and orthonormalized.
-    x0 = (
-        manifold.Init_point()
-        if Xinit is None
-        else as_matrix(Xinit, n, p, "Xinit")
+    # A caller supplied starting point is used exactly as given; only
+    # the default one is drawn and orthonormalized.
+    start = (
+        manifold.init_point()
+        if xinit is None
+        else as_matrix(xinit, n, p, "xinit")
     )
 
     x, nit, fvals, kkts, feasv, fval, kkt, fea, betout = _smopt.smpcf(
-        x0,
+        start,
         _AUTO_BETA if beta is None else float(beta),
         maxit,
         gtol,
@@ -97,4 +97,4 @@ def PenCF(  # noqa: N802
     return x, out
 
 
-__all__: list[str] = ["PenCF"]
+__all__: list[str] = ["pencf"]

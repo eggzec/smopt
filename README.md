@@ -40,7 +40,7 @@ runtime.
 
 ```python
 import numpy as np
-from smopt import SLPG_smooth, Stiefel
+from smopt import slpg_smooth, Stiefel
 
 n, p = 1000, 10
 M = Stiefel(n, p)
@@ -53,7 +53,7 @@ def obj_fun(X):
     return float(np.sum(X * AX)), 2.0 * AX
 
 
-X, out = SLPG_smooth(obj_fun, M)
+X, out = slpg_smooth(obj_fun, M)
 print(out["fval"], out["fea"])
 ```
 
@@ -61,10 +61,10 @@ print(out["fval"], out["fea"])
 
 | Name | Comment | Call |
 | --- | --- | --- |
-| `SLPG_smooth` | penalty-free first-order method for smooth problems | `SLPG_smooth(obj_fun, M)` |
-| `SLPG` | penalty-free first-order method for nonsmooth problems | `SLPG(obj_fun, M, prox=...)` |
-| `SLPG_l21` | penalty-free first-order method for $\ell_{2,1}$ regularized problems | `SLPG_l21(obj_fun, M, gamma=...)` |
-| `PenCF` | constraint dissolving penalty method | `PenCF(Xinit, obj_fun, M)` |
+| `slpg_smooth` | penalty-free first-order method for smooth problems | `slpg_smooth(obj_fun, M)` |
+| `slpg` | penalty-free first-order method for nonsmooth problems | `slpg(obj_fun, M, prox=...)` |
+| `slpg_l21` | penalty-free first-order method for $\ell_{2,1}$ regularized problems | `slpg_l21(obj_fun, M, gamma=...)` |
+| `pencf` | constraint dissolving penalty method | `pencf(xinit, obj_fun, M)` |
 
 Every solver returns `(X, out)`, where `out` carries the `fvals`, `kkts`
 and `feas` histories together with the final `fval`, `kkt` and `fea`.
@@ -90,7 +90,7 @@ src/
   smman.f       Stiefel geometry: C, JA, JC, the A map, the polar retraction
   smprox.f      proximal operators and the l_{2,1} multiplier
   smslpg.f      the SLPG solver drivers and the Arrow-Hurwicz inner iteration
-  smpencf.f     the PenCF driver
+  smpencf.f     the pencf driver
   _smopt.pyf    f2py signatures binding the above to Python
   smopt/        the thin Python layer: argument marshalling and reporting
 tests/

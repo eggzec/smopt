@@ -55,18 +55,18 @@ def test_slpg_smooth_matches_reference(
     obj, _ = eig_problem(rng, n, p)
     x0 = orthonormal(rng, n, p)
 
-    got_x, got = smopt.SLPG_smooth(
+    got_x, got = smopt.slpg_smooth(
         obj,
         m,
-        Xinit=x0.copy(),
+        xinit=x0.copy(),
         maxit=TRACE_MAXIT,
         post_process=post_process,
         verbosity=0,
     )
-    want_x, want = reference.SLPG_smooth(
+    want_x, want = reference.slpg_smooth(
         obj,
         ref_m,
-        Xinit=x0.copy(),
+        xinit=x0.copy(),
         maxit=TRACE_MAXIT,
         post_process=post_process,
     )
@@ -90,11 +90,11 @@ def test_slpg_matches_reference(
     def ref_prox(x: np.ndarray, eta: float) -> np.ndarray:
         return reference.prox_l1(x, eta, gamma=gamma)
 
-    got_x, got = smopt.SLPG(
-        obj, m, Xinit=x0.copy(), maxit=TRACE_MAXIT, prox=prox, verbosity=0
+    got_x, got = smopt.slpg(
+        obj, m, xinit=x0.copy(), maxit=TRACE_MAXIT, prox=prox, verbosity=0
     )
-    want_x, want = reference.SLPG(
-        obj, ref_m, Xinit=x0.copy(), maxit=TRACE_MAXIT, prox=ref_prox
+    want_x, want = reference.slpg(
+        obj, ref_m, xinit=x0.copy(), maxit=TRACE_MAXIT, prox=ref_prox
     )
 
     assert_same_trace(got, want)
@@ -110,11 +110,11 @@ def test_slpg_without_a_prox_matches_reference(
     obj, _ = eig_problem(rng, n, p)
     x0 = orthonormal(rng, n, p)
 
-    got_x, got = smopt.SLPG(
-        obj, m, Xinit=x0.copy(), maxit=TRACE_MAXIT, verbosity=0
+    got_x, got = smopt.slpg(
+        obj, m, xinit=x0.copy(), maxit=TRACE_MAXIT, verbosity=0
     )
-    want_x, want = reference.SLPG(
-        obj, ref_m, Xinit=x0.copy(), maxit=TRACE_MAXIT
+    want_x, want = reference.slpg(
+        obj, ref_m, xinit=x0.copy(), maxit=TRACE_MAXIT
     )
 
     assert_same_trace(got, want)
@@ -130,11 +130,11 @@ def test_slpg_l21_matches_reference(
     obj, _ = eig_problem(rng, n, p)
     x0 = orthonormal(rng, n, p)
 
-    got_x, got = smopt.SLPG_l21(
-        obj, m, Xinit=x0.copy(), maxit=TRACE_MAXIT, gamma=gamma, verbosity=0
+    got_x, got = smopt.slpg_l21(
+        obj, m, xinit=x0.copy(), maxit=TRACE_MAXIT, gamma=gamma, verbosity=0
     )
-    want_x, want = reference.SLPG_l21(
-        obj, ref_m, Xinit=x0.copy(), maxit=TRACE_MAXIT, gamma=gamma
+    want_x, want = reference.slpg_l21(
+        obj, ref_m, xinit=x0.copy(), maxit=TRACE_MAXIT, gamma=gamma
     )
 
     assert_same_trace(got, want)
@@ -150,10 +150,10 @@ def test_pencf_matches_reference(
     obj, _ = eig_problem(rng, n, p)
     x0 = orthonormal(rng, n, p)
 
-    got_x, got = smopt.PenCF(
+    got_x, got = smopt.pencf(
         x0.copy(), obj, m, beta=beta, maxit=TRACE_MAXIT, verbosity=0
     )
-    want_x, want = reference.PenCF(
+    want_x, want = reference.pencf(
         x0.copy(), obj, ref_m, beta=beta, maxit=TRACE_MAXIT
     )
 
@@ -167,15 +167,15 @@ def test_pencf_reports_the_beta_it_used(rng: np.random.Generator) -> None:
     obj, _ = eig_problem(rng, n, p)
     x0 = orthonormal(rng, n, p)
 
-    _, out = smopt.PenCF(x0.copy(), obj, m, maxit=5, verbosity=0)
+    _, out = smopt.pencf(x0.copy(), obj, m, maxit=5, verbosity=0)
     _, grad = obj(x0)
     assert out["beta"] == pytest.approx(0.1 * np.linalg.norm(grad, "fro"))
 
-    _, out = smopt.PenCF(x0.copy(), obj, m, beta=0.0, maxit=5, verbosity=0)
+    _, out = smopt.pencf(x0.copy(), obj, m, beta=0.0, maxit=5, verbosity=0)
     assert out["beta"] == pytest.approx(0.0)
 
 
-SOLVERS = ["SLPG_smooth", "SLPG", "SLPG_l21"]
+SOLVERS = ["slpg_smooth", "slpg", "slpg_l21"]
 
 
 @pytest.mark.parametrize("name", SOLVERS)
@@ -189,35 +189,35 @@ def test_solvers_reach_the_known_minimum(
     x0 = orthonormal(rng, n, p)
 
     solver = getattr(smopt, name)
-    x, out = solver(obj, m, Xinit=x0, maxit=3000, gtol=1e-9, verbosity=0)
+    x, out = solver(obj, m, xinit=x0, maxit=3000, gtol=1e-9, verbosity=0)
 
-    assert m.Feas_eval(x) < 1e-10
+    assert m.feas_eval(x) < 1e-10
     assert out["fval"] == pytest.approx(best, rel=1e-5)
 
 
-#: PenCF lands near the optimum rather than on it. Holding the problem
+#: pencf lands near the optimum rather than on it. Holding the problem
 #: below fixed and varying only the starting point over 60 draws, the
 #: relative error has median 7.6e-07 and worst case 1.2e-04; a 150-seed
 #: sweep over problems too tops out at 1.0e-04, and the NumPy reference
 #: in tests/reference.py is worse still at 1.7e-04. That is the penalty
-#: method, not this port. The SLPG solvers above reach machine precision
+#: method, not this port. The slpg solvers above reach machine precision
 #: on the same instance, hence their much tighter tolerance.
 PENALTY_RTOL = 1e-3
 
 
 def test_pencf_reaches_the_known_minimum(rng: np.random.Generator) -> None:
-    """PenCF converges to the optimum to within a penalty method's reach."""
+    """pencf converges to the optimum to within a penalty method's reach."""
     n, p = 50, 4
     m = smopt.Stiefel(n, p)
     obj, best = eig_problem(rng, n, p)
 
-    x, out = smopt.PenCF(
+    x, out = smopt.pencf(
         orthonormal(rng, n, p), obj, m, maxit=3000, gtol=1e-9, verbosity=0
     )
 
     # Feasibility is the part the method does guarantee: it holds to
     # ~3e-15 across every instance measured, so it is asserted tightly.
-    assert m.Feas_eval(x) < 1e-10
+    assert m.feas_eval(x) < 1e-10
     assert out["fval"] == pytest.approx(best, rel=PENALTY_RTOL)
     # A feasible point can never beat the true minimum; catching that
     # would mean the objective and the constraint had come apart.
@@ -232,11 +232,11 @@ def test_l21_regularization_induces_row_sparsity(
     obj, _ = eig_problem(rng, n, p)
     x0 = orthonormal(rng, n, p)
 
-    dense, _ = smopt.SLPG_l21(
-        obj, m, Xinit=x0.copy(), maxit=500, gamma=0.0, verbosity=0
+    dense, _ = smopt.slpg_l21(
+        obj, m, xinit=x0.copy(), maxit=500, gamma=0.0, verbosity=0
     )
-    sparse, _ = smopt.SLPG_l21(
-        obj, m, Xinit=x0.copy(), maxit=500, gamma=1.0, verbosity=0
+    sparse, _ = smopt.slpg_l21(
+        obj, m, xinit=x0.copy(), maxit=500, gamma=1.0, verbosity=0
     )
 
     def live_rows(x: np.ndarray) -> int:
@@ -255,7 +255,7 @@ def test_histories_have_one_entry_per_iteration(
 
     solver = getattr(smopt, name)
     _, out = solver(
-        obj, m, Xinit=orthonormal(rng, n, p), maxit=7, gtol=0.0, verbosity=0
+        obj, m, xinit=orthonormal(rng, n, p), maxit=7, gtol=0.0, verbosity=0
     )
 
     assert len(out["fvals"]) == 7
@@ -273,7 +273,7 @@ def test_a_random_start_is_drawn_when_none_is_given(
 
     x, _ = getattr(smopt, name)(obj, m, maxit=20, verbosity=0)
     assert x.shape == (n, p)
-    assert m.Feas_eval(x) < 1e-10
+    assert m.feas_eval(x) < 1e-10
 
 
 @pytest.mark.parametrize("name", SOLVERS)
@@ -294,10 +294,10 @@ def test_verbosity_controls_printing(
     obj, _ = eig_problem(rng, n, p)
     x0 = orthonormal(rng, n, p)
 
-    smopt.SLPG_smooth(obj, m, Xinit=x0.copy(), maxit=25, verbosity=0)
+    smopt.slpg_smooth(obj, m, xinit=x0.copy(), maxit=25, verbosity=0)
     assert capsys.readouterr().out == ""
 
-    smopt.SLPG_smooth(obj, m, Xinit=x0.copy(), maxit=25, verbosity=2)
+    smopt.slpg_smooth(obj, m, xinit=x0.copy(), maxit=25, verbosity=2)
     out = capsys.readouterr().out
     assert "Iter:0" in out
     assert "Iter:20" in out
@@ -316,8 +316,8 @@ def test_the_objective_sees_the_iterate_as_a_matrix(
         seen.append(x.shape)
         return float(np.sum(x * x)), 2.0 * x
 
-    smopt.SLPG_smooth(
-        obj, m, Xinit=orthonormal(rng, n, p), maxit=3, verbosity=0
+    smopt.slpg_smooth(
+        obj, m, xinit=orthonormal(rng, n, p), maxit=3, verbosity=0
     )
     assert seen
     assert set(seen) == {(n, p)}
@@ -335,10 +335,10 @@ def test_l21_stays_feasible_when_it_collapses_the_rank(
     m = smopt.Stiefel(n, p)
     obj, _ = eig_problem(rng, n, p)
 
-    x, out = smopt.SLPG_l21(
-        obj, m, Xinit=orthonormal(rng, n, p), maxit=40, gamma=0.1, verbosity=0
+    x, out = smopt.slpg_l21(
+        obj, m, xinit=orthonormal(rng, n, p), maxit=40, gamma=0.1, verbosity=0
     )
 
     assert np.all(np.isfinite(x))
-    assert m.Feas_eval(x) < 1e-10
+    assert m.feas_eval(x) < 1e-10
     assert np.isfinite(out["fval"])

@@ -28,7 +28,7 @@ runtime dependency.
 
 ```python
 import numpy as np
-from smopt import SLPG_smooth, Stiefel
+from smopt import slpg_smooth, Stiefel
 
 M = Stiefel(1000, 10)
 A = np.diag(np.arange(1000, dtype=float))
@@ -39,17 +39,17 @@ def obj_fun(X):
     return float(np.sum(X * AX)), 2.0 * AX
 
 
-X, out = SLPG_smooth(obj_fun, M)
+X, out = slpg_smooth(obj_fun, M)
 ```
 
 ## Solvers
 
 | Name | Use when |
 | --- | --- |
-| `SLPG_smooth` | the objective is smooth |
-| `SLPG` | there is a nonsmooth term with a known proximal operator |
-| `SLPG_l21` | the nonsmooth term is $\gamma\|X\|_{2,1}$ |
-| `PenCF` | a constraint dissolving penalty method is preferred |
+| `slpg_smooth` | the objective is smooth |
+| `slpg` | there is a nonsmooth term with a known proximal operator |
+| `slpg_l21` | the nonsmooth term is $\gamma\|X\|_{2,1}$ |
+| `pencf` | a constraint dissolving penalty method is preferred |
 
 ## Documentation
 

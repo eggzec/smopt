@@ -19,22 +19,22 @@ objective, and reporting progress.
 
 Examples:
     >>> import numpy as np
-    >>> from smopt import SLPG_smooth, Stiefel
-    >>> M = Stiefel(6, 2)
-    >>> A = np.diag([5.0, 4.0, 3.0, 2.0, 1.0, 0.0])
-    >>> def obj(X):
-    ...     return float(np.sum(X * (A @ X))), 2.0 * (A @ X)
-    >>> X, out = SLPG_smooth(
-    ...     obj, M, Xinit=np.arange(12.0).reshape(6, 2), verbosity=0
+    >>> from smopt import Stiefel, slpg_smooth
+    >>> manifold = Stiefel(6, 2)
+    >>> a = np.diag([5.0, 4.0, 3.0, 2.0, 1.0, 0.0])
+    >>> def obj(x):
+    ...     return float(np.sum(x * (a @ x))), 2.0 * (a @ x)
+    >>> x, out = slpg_smooth(
+    ...     obj, manifold, xinit=np.arange(12.0).reshape(6, 2), verbosity=0
     ... )
-    >>> bool(M.Feas_eval(X) < 1e-8)
+    >>> bool(manifold.feas_eval(x) < 1e-8)
     True
 """
 
 from importlib.metadata import PackageNotFoundError, version
 
 from .manifold import Stiefel
-from .solver import SLPG, PenCF, SLPG_l21, SLPG_smooth
+from .solver import pencf, slpg, slpg_l21, slpg_smooth
 from .utility import prox_l1, prox_l21
 
 
@@ -44,12 +44,12 @@ except PackageNotFoundError:  # pragma: no cover - source checkout
     __version__ = "0.0.0"
 
 __all__: list[str] = [
-    "SLPG",
-    "PenCF",
-    "SLPG_l21",
-    "SLPG_smooth",
     "Stiefel",
     "__version__",
+    "pencf",
     "prox_l1",
     "prox_l21",
+    "slpg",
+    "slpg_l21",
+    "slpg_smooth",
 ]

@@ -15,8 +15,8 @@ SHAPES = [(1, 1), (5, 1), (12, 3), (40, 7), (9, 9)]
 def test_phi_symmetrizes(rng: np.random.Generator, n: int, p: int) -> None:
     m = smopt.Stiefel(n, p)
     a = rng.standard_normal((p, p))
-    got = m.Phi(a)
-    assert np.allclose(got, reference.Stiefel(n, p).Phi(a))
+    got = m.phi(a)
+    assert np.allclose(got, reference.Stiefel(n, p).phi(a))
     assert np.allclose(got, got.T)
 
 
@@ -27,7 +27,7 @@ def test_phi_does_not_mutate_input(
     m = smopt.Stiefel(n, p)
     a = rng.standard_normal((p, p))
     before = a.copy()
-    m.Phi(a)
+    m.phi(a)
     assert np.array_equal(a, before)
 
 
@@ -37,8 +37,8 @@ def test_constraint_and_feasibility(
 ) -> None:
     m, ref = smopt.Stiefel(n, p), reference.Stiefel(n, p)
     x = rng.standard_normal((n, p))
-    assert np.allclose(m.C(x), ref.C(x))
-    assert m.Feas_eval(x) == pytest.approx(ref.Feas_eval(x))
+    assert np.allclose(m.c(x), ref.c(x))
+    assert m.feas_eval(x) == pytest.approx(ref.feas_eval(x))
 
 
 @pytest.mark.parametrize(("n", "p"), SHAPES)
@@ -46,7 +46,7 @@ def test_feasibility_vanishes_on_the_manifold(
     rng: np.random.Generator, n: int, p: int
 ) -> None:
     m = smopt.Stiefel(n, p)
-    assert m.Feas_eval(orthonormal(rng, n, p)) < 1e-12
+    assert m.feas_eval(orthonormal(rng, n, p)) < 1e-12
 
 
 @pytest.mark.parametrize(("n", "p"), SHAPES)
@@ -57,9 +57,9 @@ def test_jacobians(rng: np.random.Generator, n: int, p: int) -> None:
     d = rng.standard_normal((n, p))
     lam = rng.standard_normal((p, p))
 
-    assert np.allclose(m.JA(x, g), ref.JA(x, g))
-    assert np.allclose(m.JC(x, lam), ref.JC(x, lam))
-    assert np.allclose(m.JC_transpose(x, d), ref.JC_transpose(x, d))
+    assert np.allclose(m.ja(x, g), ref.ja(x, g))
+    assert np.allclose(m.jc(x, lam), ref.jc(x, lam))
+    assert np.allclose(m.jc_transpose(x, d), ref.jc_transpose(x, d))
 
 
 @pytest.mark.parametrize(("n", "p"), SHAPES)
@@ -68,7 +68,7 @@ def test_ja_output_is_tangent(rng: np.random.Generator, n: int, p: int) -> None:
     m = smopt.Stiefel(n, p)
     x = orthonormal(rng, n, p)
     g = rng.standard_normal((n, p))
-    r = m.JA(x, g)
+    r = m.ja(x, g)
     xtr = x.T @ r
     assert np.allclose(xtr, -xtr.T, atol=1e-10)
 
@@ -81,7 +81,7 @@ def test_a_map_matches_reference(
     """Both the near-manifold expansion and the exact solve branch."""
     m, ref = smopt.Stiefel(n, p), reference.Stiefel(n, p)
     x = orthonormal(rng, n, p) + scale * rng.standard_normal((n, p))
-    assert np.allclose(m.A(x), ref.A(x), atol=1e-10)
+    assert np.allclose(m.a(x), ref.a(x), atol=1e-10)
 
 
 @pytest.mark.parametrize(("n", "p"), SHAPES)
@@ -90,7 +90,7 @@ def test_a_map_improves_feasibility(
 ) -> None:
     m = smopt.Stiefel(n, p)
     x = orthonormal(rng, n, p) + 0.05 * rng.standard_normal((n, p))
-    assert m.Feas_eval(m.A(x)) < m.Feas_eval(x)
+    assert m.feas_eval(m.a(x)) < m.feas_eval(x)
 
 
 @pytest.mark.parametrize(("n", "p"), SHAPES)
@@ -99,9 +99,9 @@ def test_post_process_is_the_polar_factor(
 ) -> None:
     m, ref = smopt.Stiefel(n, p), reference.Stiefel(n, p)
     x = rng.standard_normal((n, p))
-    got = m.Post_process(x)
-    assert np.allclose(got, ref.Post_process(x), atol=1e-9)
-    assert m.Feas_eval(got) < 1e-12
+    got = m.post_process(x)
+    assert np.allclose(got, ref.post_process(x), atol=1e-9)
+    assert m.feas_eval(got) < 1e-12
 
 
 @pytest.mark.parametrize(("n", "p"), SHAPES)
@@ -109,8 +109,8 @@ def test_init_point_lands_on_the_manifold(
     rng: np.random.Generator, n: int, p: int
 ) -> None:
     m = smopt.Stiefel(n, p)
-    assert m.Feas_eval(m.Init_point(rng.standard_normal((n, p)))) < 1e-12
-    assert m.Feas_eval(m.Init_point()) < 1e-12
+    assert m.feas_eval(m.init_point(rng.standard_normal((n, p)))) < 1e-12
+    assert m.feas_eval(m.init_point()) < 1e-12
 
 
 @pytest.mark.parametrize(("n", "p"), SHAPES)
@@ -119,7 +119,7 @@ def test_init_point_keeps_a_feasible_argument(
 ) -> None:
     m = smopt.Stiefel(n, p)
     x = orthonormal(rng, n, p)
-    assert np.allclose(m.Init_point(x), x)
+    assert np.allclose(m.init_point(x), x)
 
 
 def test_rejects_bad_dimensions() -> None:
@@ -132,9 +132,9 @@ def test_rejects_bad_dimensions() -> None:
 def test_rejects_mismatched_shapes(rng: np.random.Generator) -> None:
     m = smopt.Stiefel(6, 2)
     with pytest.raises(ValueError, match="must have shape"):
-        m.C(rng.standard_normal((6, 3)))
+        m.c(rng.standard_normal((6, 3)))
     with pytest.raises(ValueError, match="must have shape"):
-        m.JC(orthonormal(rng, 6, 2), rng.standard_normal((3, 3)))
+        m.jc(orthonormal(rng, 6, 2), rng.standard_normal((3, 3)))
 
 
 def test_dim_attribute() -> None:
@@ -156,10 +156,10 @@ def test_post_process_completes_a_rank_deficient_point(
     if rank:
         x[:, :rank] = orthonormal(rng, n, rank)
 
-    got = m.Post_process(x)
+    got = m.post_process(x)
 
     assert np.all(np.isfinite(got))
-    assert m.Feas_eval(got) < 1e-12
+    assert m.feas_eval(got) < 1e-12
     # Whatever the completion picks, it must not disturb the directions
     # the input did pin down.
     assert np.allclose(got @ got.T @ x, x, atol=1e-10)
@@ -167,6 +167,6 @@ def test_post_process_completes_a_rank_deficient_point(
 
 def test_post_process_of_a_zero_matrix_is_still_feasible() -> None:
     m = smopt.Stiefel(5, 2)
-    got = m.Post_process(np.zeros((5, 2)))
+    got = m.post_process(np.zeros((5, 2)))
     assert np.all(np.isfinite(got))
-    assert m.Feas_eval(got) < 1e-12
+    assert m.feas_eval(got) < 1e-12

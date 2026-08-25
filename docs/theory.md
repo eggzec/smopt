@@ -81,11 +81,11 @@ instead, where $L$ is estimated from the gradient at the starting point.
 
 Three drivers are provided:
 
-- `SLPG_smooth` for $r \equiv 0$.
-- `SLPG` for a general $r$, whose constraint multiplier $\Lambda$ is
+- `slpg_smooth` for $r \equiv 0$.
+- `slpg` for a general $r$, whose constraint multiplier $\Lambda$ is
   tracked by an inner **Arrow-Hurwicz** iteration so that no penalty
   parameter has to be tuned.
-- `SLPG_l21` for $r(X) = \gamma\|X\|_{2,1}$, where both the prox and the
+- `slpg_l21` for $r(X) = \gamma\|X\|_{2,1}$, where both the prox and the
   multiplier
 
     $$
@@ -97,9 +97,9 @@ Three drivers are provided:
     therefore drives whole rows to zero, which is how sparse principal
     component analysis and related models select variables.
 
-### PenCF
+### pencf
 
-`PenCF` adds an explicit penalty to the search direction,
+`pencf` adds an explicit penalty to the search direction,
 
 $$
 \mathcal{G}(X) = \mathcal{J}_A(X)[\nabla f(X)] + \beta\, \mathcal{J}_C(X)[C(X)],

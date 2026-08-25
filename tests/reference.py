@@ -5,9 +5,12 @@ implementation statement by statement so that the Fortran drivers can be
 checked against it, and it is deliberately kept free of the validation,
 packaging and reporting concerns that the shipped package handles.
 
-The single intentional departure is :meth:`Stiefel.Init_point`, whose
-``Xinit == None`` test raises on array input; it is spelled ``is None``
-here so the reference can be driven from the tests.
+Names follow the conventions of this project rather than those of the
+original, so the oracle and the package under test can be driven through
+the same attribute lookups. The one behavioural departure is
+:meth:`Stiefel.init_point`, whose ``xinit == None`` test raises on array
+input; it is spelled ``is None`` here so the reference can be driven from
+the tests.
 """
 
 import numpy as np
@@ -22,47 +25,47 @@ class Stiefel:
         self._p = p
         self.dim = n * p
 
-    def Phi(self, M):
-        return (M + M.T) / 2
+    def phi(self, m):
+        return (m + m.T) / 2
 
-    def A(self, X):
-        XX = X.T @ X
-        feas_tmp = norm(XX - np.eye(self._p), "fro")
+    def a(self, x):
+        xx = x.T @ x
+        feas_tmp = norm(xx - np.eye(self._p), "fro")
         if feas_tmp < 0.5:
-            return 1.5 * X - X @ (XX / 2)
-        return np.linalg.solve((XX + np.eye(self._p)) / 2, X.T).T
+            return 1.5 * x - x @ (xx / 2)
+        return np.linalg.solve((xx + np.eye(self._p)) / 2, x.T).T
 
-    def JA(self, X, G):
-        return G - X @ self.Phi(X.T @ G)
+    def ja(self, x, g):
+        return g - x @ self.phi(x.T @ g)
 
-    def JC(self, X, Lambda):
-        return X @ self.Phi(Lambda)
+    def jc(self, x, lam):
+        return x @ self.phi(lam)
 
-    def JC_transpose(self, X, D):
-        return self.Phi(X.T @ D)
+    def jc_transpose(self, x, d):
+        return self.phi(x.T @ d)
 
-    def C(self, X):
-        return X.T @ X - np.eye(self._p)
+    def c(self, x):
+        return x.T @ x - np.eye(self._p)
 
-    def Feas_eval(self, X):
-        return norm(self.C(X), "fro")
+    def feas_eval(self, x):
+        return norm(self.c(x), "fro")
 
-    def Init_point(self, Xinit=None):
-        if Xinit is None:
-            Xinit = np.random.randn(self._n, self._p)
-        if norm(Xinit.T @ Xinit - np.eye(self._p), "fro") > 1e-6:
-            Xinit, _ = np.linalg.qr(Xinit)
-        return Xinit
+    def init_point(self, xinit=None):
+        if xinit is None:
+            xinit = np.random.randn(self._n, self._p)
+        if norm(xinit.T @ xinit - np.eye(self._p), "fro") > 1e-6:
+            xinit, _ = np.linalg.qr(xinit)
+        return xinit
 
-    def Post_process(self, X):
-        UX, _, VX = svd(X, full_matrices=False)
-        return UX @ VX
+    def post_process(self, x):
+        ux, _, vx = svd(x, full_matrices=False)
+        return ux @ vx
 
 
-def SLPG_smooth(
+def slpg_smooth(
     obj_fun,
     manifold,
-    Xinit=None,
+    xinit=None,
     maxit=100,
     gtol=1e-5,
     post_process=True,
@@ -71,34 +74,34 @@ def SLPG_smooth(
     """Reference SLPG for a smooth objective."""
     kkts, feas, fvals = [], [], []
 
-    if Xinit is None:
-        Xinit = manifold.Init_point()
+    if xinit is None:
+        xinit = manifold.init_point()
 
-    X = Xinit
-    fval, gradf = obj_fun(X)
-    gradr = manifold.JA(X, gradf)
-    L = norm(gradf, "fro") + norm(gradr, "fro")
+    x = xinit
+    fval, gradf = obj_fun(x)
+    gradr = manifold.ja(x, gradf)
+    lip = norm(gradf, "fro") + norm(gradr, "fro")
 
-    S = Y = None
+    s = y = None
     for jj in range(maxit):
         if jj < 3:
-            stepsize = 0.01 / L
+            stepsize = 0.01 / lip
         else:
-            stepsize = np.abs(np.sum(S * Y) / np.sum(Y * Y))
+            stepsize = np.abs(np.sum(s * y) / np.sum(y * y))
             stepsize = np.min((stepsize, 1e10))
 
-        X_p = X
-        X = X - stepsize * gradr
-        X = manifold.A(X)
-        S = X - X_p
+        x_p = x
+        x = x - stepsize * gradr
+        x = manifold.a(x)
+        s = x - x_p
 
-        fval, gradf = obj_fun(X)
+        fval, gradf = obj_fun(x)
         gradr_p = gradr
-        gradr = manifold.JA(X, gradf)
-        Y = gradr - gradr_p
+        gradr = manifold.ja(x, gradf)
+        y = gradr - gradr_p
 
         substationarity = norm(gradr, "fro")
-        feasibility = manifold.Feas_eval(X)
+        feasibility = manifold.feas_eval(x)
 
         kkts.append(substationarity)
         feas.append(feasibility)
@@ -108,16 +111,16 @@ def SLPG_smooth(
             break
 
     if post_process:
-        X = manifold.Post_process(X)
-        fval, gradf = obj_fun(X)
-        gradr = manifold.JA(X, gradf)
+        x = manifold.post_process(x)
+        fval, gradf = obj_fun(x)
+        gradr = manifold.ja(x, gradf)
         substationarity = norm(gradr, "fro")
-        feasibility = manifold.Feas_eval(X)
+        feasibility = manifold.feas_eval(x)
         kkts[-1] = substationarity
         feas[-1] = feasibility
         fvals[-1] = fval
 
-    return X, {
+    return x, {
         "kkts": kkts,
         "fvals": fvals,
         "fea": feasibility,
@@ -127,29 +130,29 @@ def SLPG_smooth(
     }
 
 
-def Arrow_Hurwicz_SLPG(X, G, eta, prox, Lambda, manifold, tol=0):
+def arrow_hurwicz_slpg(x, g, eta, prox, lam, manifold, tol=0):
     """Reference Arrow-Hurwicz multiplier update."""
-    Lambda_temp = Lambda
+    lam_temp = lam
     try_stepsize = eta
-    Z_tmp = X - try_stepsize * G
+    z_tmp = x - try_stepsize * g
     for _ in range(5):
-        X_try = prox(
-            Z_tmp - try_stepsize * manifold.JC(X, Lambda_temp), try_stepsize
+        x_try = prox(
+            z_tmp - try_stepsize * manifold.jc(x, lam_temp), try_stepsize
         )
-        D_X = 1 / try_stepsize * (X_try - X)
-        Lambda_inc = manifold.JC_transpose(X, D_X)
-        Lambda_temp = Lambda_temp + Lambda_inc
-        if norm(Lambda_inc, "fro") < tol:
+        d_x = 1 / try_stepsize * (x_try - x)
+        lam_inc = manifold.jc_transpose(x, d_x)
+        lam_temp = lam_temp + lam_inc
+        if norm(lam_inc, "fro") < tol:
             break
-    return Lambda_temp
+    return lam_temp
 
 
-def SLPG(
+def slpg(
     obj_fun,
     manifold,
-    Xinit=None,
+    xinit=None,
     maxit=100,
-    prox=lambda X, eta: X,
+    prox=lambda x, eta: x,
     gtol=1e-5,
     post_process=True,
     verbosity=0,
@@ -157,50 +160,52 @@ def SLPG(
     """Reference SLPG for a proximable regularizer."""
     kkts, feas, fvals, steps = [], [], [], []
 
-    if Xinit is None:
-        Xinit = manifold.Init_point()
+    if xinit is None:
+        xinit = manifold.init_point()
 
     p = manifold._p
-    X = Xinit
-    fval, gradf = obj_fun(X)
-    gradr = manifold.JA(X, gradf)
-    L = norm(gradf, "fro") + norm(gradr, "fro")
+    x = xinit
+    fval, gradf = obj_fun(x)
+    gradr = manifold.ja(x, gradf)
+    lip = norm(gradf, "fro") + norm(gradr, "fro")
 
-    Lambda_r = np.zeros([p, p])
-    Lambda_r = Arrow_Hurwicz_SLPG(X, gradr, 0.01 / L, prox, Lambda_r, manifold)
-    Grad = gradr + manifold.JC(X, Lambda_r)
+    lam = np.zeros([p, p])
+    lam = arrow_hurwicz_slpg(x, gradr, 0.01 / lip, prox, lam, manifold)
+    grad = gradr + manifold.jc(x, lam)
 
-    S = Y = None
+    s = y = None
     for jj in range(maxit):
         if jj < 5:
-            stepsize = 0.01 / L
+            stepsize = 0.01 / lip
         else:
-            stepsize = np.abs(np.sum(S * S) / np.sum(S * Y))
+            stepsize = np.abs(np.sum(s * s) / np.sum(s * y))
             stepsize = np.min((stepsize, 1e10))
 
-        X_p = X
+        x_p = x
         steps.append(stepsize)
 
-        X = prox(X - stepsize * (gradr + manifold.JC(X, Lambda_r)), stepsize)
-        X = manifold.A(X)
-        S = X - X_p
+        x = prox(x - stepsize * (gradr + manifold.jc(x, lam)), stepsize)
+        x = manifold.a(x)
+        s = x - x_p
 
-        fval, gradf = obj_fun(X)
-        Grad_p = Grad
-        gradr = manifold.JA(X, gradf)
+        fval, gradf = obj_fun(x)
+        grad_p = grad
+        gradr = manifold.ja(x, gradf)
 
         stepsize_try = np.average(steps[np.maximum(0, jj - 10) :])
-        stepsize_try = np.minimum(np.maximum(stepsize_try, 1e-5 / L), 1e10 / L)
-
-        tol_AW = 1000 * manifold.Feas_eval(X)
-        Lambda_r = Arrow_Hurwicz_SLPG(
-            X, gradr, stepsize_try, prox, Lambda_r, manifold, tol=tol_AW
+        stepsize_try = np.minimum(
+            np.maximum(stepsize_try, 1e-5 / lip), 1e10 / lip
         )
-        Grad = gradr + manifold.JC(X, Lambda_r)
-        Y = Grad - Grad_p
 
-        substationarity = norm(S / stepsize, "fro")
-        feasibility = manifold.Feas_eval(X)
+        tol_aw = 1000 * manifold.feas_eval(x)
+        lam = arrow_hurwicz_slpg(
+            x, gradr, stepsize_try, prox, lam, manifold, tol=tol_aw
+        )
+        grad = gradr + manifold.jc(x, lam)
+        y = grad - grad_p
+
+        substationarity = norm(s / stepsize, "fro")
+        feasibility = manifold.feas_eval(x)
 
         kkts.append(substationarity)
         feas.append(feasibility)
@@ -210,14 +215,14 @@ def SLPG(
             break
 
     if post_process:
-        X = manifold.Post_process(X)
-        fval, gradf = obj_fun(X)
-        feasibility = manifold.Feas_eval(X)
+        x = manifold.post_process(x)
+        fval, gradf = obj_fun(x)
+        feasibility = manifold.feas_eval(x)
         kkts[-1] = substationarity
         feas[-1] = feasibility
         fvals[-1] = fval
 
-    return X, {
+    return x, {
         "kkts": kkts,
         "fvals": fvals,
         "fea": feasibility,
@@ -227,10 +232,10 @@ def SLPG(
     }
 
 
-def SLPG_l21(
+def slpg_l21(
     obj_fun,
     manifold,
-    Xinit=None,
+    xinit=None,
     maxit=100,
     gamma=0,
     gtol=1e-5,
@@ -239,51 +244,51 @@ def SLPG_l21(
 ):
     """Reference SLPG for the l_{2,1} regularized objective."""
 
-    def prox(X_input, eta):
-        X_ref = np.sqrt(np.sum(X_input**2, axis=1, keepdims=True))
-        X_ref_reduce = np.maximum(X_ref - gamma * eta, 0)
-        return (X_ref_reduce / (X_ref + 1e-16)) * X_input
+    def prox(x_input, eta):
+        x_ref = np.sqrt(np.sum(x_input**2, axis=1, keepdims=True))
+        x_ref_reduce = np.maximum(x_ref - gamma * eta, 0)
+        return (x_ref_reduce / (x_ref + 1e-16)) * x_input
 
-    def generate_Lambda_r(X_input):
-        X_ref = 1 / (1e-14 + np.sqrt(np.sum(X_input**2, axis=1, keepdims=True)))
-        return -X_input.T @ (X_ref * X_input)
+    def generate_lam(x_input):
+        x_ref = 1 / (1e-14 + np.sqrt(np.sum(x_input**2, axis=1, keepdims=True)))
+        return -x_input.T @ (x_ref * x_input)
 
     kkts, feas, fvals = [], [], []
 
-    if Xinit is None:
-        Xinit = manifold.Init_point()
+    if xinit is None:
+        xinit = manifold.init_point()
 
-    X = Xinit
-    fval, gradf = obj_fun(X)
-    gradr = manifold.JA(X, gradf)
-    L = norm(gradf, "fro") + norm(gradr, "fro")
+    x = xinit
+    fval, gradf = obj_fun(x)
+    gradr = manifold.ja(x, gradf)
+    lip = norm(gradf, "fro") + norm(gradr, "fro")
 
-    Lambda_r = gamma * generate_Lambda_r(X)
-    Grad = gradr + manifold.JC(X, Lambda_r)
+    lam = gamma * generate_lam(x)
+    grad = gradr + manifold.jc(x, lam)
 
-    S = Y = None
+    s = y = None
     for jj in range(maxit):
         if jj < 5:
-            stepsize = 0.001 / L
+            stepsize = 0.001 / lip
         else:
-            stepsize = np.abs(np.sum(S * S) / np.sum(S * Y))
+            stepsize = np.abs(np.sum(s * s) / np.sum(s * y))
             stepsize = np.min((stepsize, 1e5))
 
-        X_p = X
-        X = prox(X - stepsize * Grad, stepsize)
-        X = manifold.A(X)
-        S = X - X_p
+        x_p = x
+        x = prox(x - stepsize * grad, stepsize)
+        x = manifold.a(x)
+        s = x - x_p
 
-        fval, gradf = obj_fun(X)
-        Grad_p = Grad
-        gradr = manifold.JA(X, gradf)
+        fval, gradf = obj_fun(x)
+        grad_p = grad
+        gradr = manifold.ja(x, gradf)
 
-        Lambda_r = gamma * generate_Lambda_r(X)
-        Grad = gradr + manifold.JC(X, Lambda_r)
-        Y = Grad - Grad_p
+        lam = gamma * generate_lam(x)
+        grad = gradr + manifold.jc(x, lam)
+        y = grad - grad_p
 
-        substationarity = norm(S / stepsize, "fro")
-        feasibility = manifold.Feas_eval(X)
+        substationarity = norm(s / stepsize, "fro")
+        feasibility = manifold.feas_eval(x)
 
         kkts.append(substationarity)
         feas.append(feasibility)
@@ -293,14 +298,14 @@ def SLPG_l21(
             break
 
     if post_process:
-        X = manifold.Post_process(X)
-        fval, gradf = obj_fun(X)
-        feasibility = manifold.Feas_eval(X)
+        x = manifold.post_process(x)
+        fval, gradf = obj_fun(x)
+        feasibility = manifold.feas_eval(x)
         kkts[-1] = substationarity
         feas[-1] = feasibility
         fvals[-1] = fval
 
-    return X, {
+    return x, {
         "kkts": kkts,
         "fvals": fvals,
         "fea": feasibility,
@@ -310,8 +315,8 @@ def SLPG_l21(
     }
 
 
-def PenCF(
-    Xinit,
+def pencf(
+    xinit,
     obj_fun,
     manifold,
     beta=None,
@@ -324,46 +329,46 @@ def PenCF(
     kkts, feas, fvals = [], [], []
 
     p = manifold._p
-    X = Xinit
-    fval, gradf = obj_fun(X)
+    x = xinit
+    fval, gradf = obj_fun(x)
 
     if beta is None:
         beta = 0.1 * norm(gradf, "fro")
 
-    gradr = manifold.JA(X, gradf) + beta * manifold.JC(X, manifold.C(X))
-    L = norm(gradf, "fro") + norm(gradr, "fro")
+    gradr = manifold.ja(x, gradf) + beta * manifold.jc(x, manifold.c(x))
+    lip = norm(gradf, "fro") + norm(gradr, "fro")
 
-    S = Y = None
+    s = y = None
     for jj in range(maxit):
         if jj < 3:
-            stepsize = 0.01 / L
+            stepsize = 0.01 / lip
         else:
-            stepsize = np.abs(np.sum(S * Y) / np.sum(Y * Y))
+            stepsize = np.abs(np.sum(s * y) / np.sum(y * y))
             stepsize = np.min((stepsize, 1e10))
 
-        X_p = X
-        X = X - stepsize * gradr
+        x_p = x
+        x = x - stepsize * gradr
 
-        XX = X.T @ X
-        feas_tmp = manifold.Feas_eval(X)
+        xx = x.T @ x
+        feas_tmp = manifold.feas_eval(x)
         if feas_tmp > 1e-1:
             if feas_tmp < 0.5:
-                X = 1.5 * X - X @ (XX / 2)
+                x = 1.5 * x - x @ (xx / 2)
             else:
-                X = np.linalg.solve((XX + np.eye(p)) / 2, X.T).T
+                x = np.linalg.solve((xx + np.eye(p)) / 2, x.T).T
 
-        if norm(X, "fro") > 1.001 * np.sqrt(p):
-            X = X * (1.001 * np.sqrt(p) / norm(X, "fro"))
+        if norm(x, "fro") > 1.001 * np.sqrt(p):
+            x = x * (1.001 * np.sqrt(p) / norm(x, "fro"))
 
-        S = X - X_p
+        s = x - x_p
 
-        fval, gradf = obj_fun(X)
+        fval, gradf = obj_fun(x)
         gradr_p = gradr
-        gradr = manifold.JA(X, gradf) + beta * manifold.JC(X, manifold.C(X))
-        Y = gradr - gradr_p
+        gradr = manifold.ja(x, gradf) + beta * manifold.jc(x, manifold.c(x))
+        y = gradr - gradr_p
 
         substationarity = norm(gradr, "fro")
-        feasibility = manifold.Feas_eval(X)
+        feasibility = manifold.feas_eval(x)
 
         kkts.append(substationarity)
         feas.append(feasibility)
@@ -373,16 +378,16 @@ def PenCF(
             break
 
     if post_process:
-        X = manifold.Post_process(X)
-        fval, gradf = obj_fun(X)
-        gradr = manifold.JA(X, gradf)
+        x = manifold.post_process(x)
+        fval, gradf = obj_fun(x)
+        gradr = manifold.ja(x, gradf)
         substationarity = norm(gradr, "fro")
-        feasibility = manifold.Feas_eval(X)
+        feasibility = manifold.feas_eval(x)
         kkts[-1] = substationarity
         feas[-1] = feasibility
         fvals[-1] = fval
 
-    return X, {
+    return x, {
         "kkts": kkts,
         "fvals": fvals,
         "fea": feasibility,
@@ -392,15 +397,15 @@ def PenCF(
     }
 
 
-def prox_l1(X_input, eta, gamma=0):
+def prox_l1(x_input, eta, gamma=0):
     """Reference proximal operator of the l_1 norm."""
-    return np.maximum(X_input - gamma * eta, 0) + np.minimum(
-        X_input + gamma * eta, 0
+    return np.maximum(x_input - gamma * eta, 0) + np.minimum(
+        x_input + gamma * eta, 0
     )
 
 
-def prox_l21(X_input, eta, gamma=0):
+def prox_l21(x_input, eta, gamma=0):
     """Reference proximal operator of the l_{2,1} norm."""
-    X_ref = np.sqrt(np.sum(X_input**2, axis=1, keepdims=True))
-    X_ref_reduce = np.maximum(X_ref - gamma * eta, 0)
-    return X_ref_reduce / (X_ref + 1e-14) * X_input
+    x_ref = np.sqrt(np.sum(x_input**2, axis=1, keepdims=True))
+    x_ref_reduce = np.maximum(x_ref - gamma * eta, 0)
+    return x_ref_reduce / (x_ref + 1e-14) * x_input

@@ -27,10 +27,28 @@ _SMOOTH_PERIOD = 20
 _PROX_PERIOD = 50
 
 
-def SLPG_smooth(  # noqa: N802
+def _start(manifold: Stiefel, xinit: Matrix | None) -> Matrix:
+    """Resolve the starting point.
+
+    A caller supplied one is used exactly as given; only the default is
+    drawn and orthonormalized.
+
+    Args:
+        manifold: The manifold fixing the dimensions.
+        xinit: The caller's starting point, or ``None``.
+
+    Returns:
+        An ``(n, p)`` matrix to start from.
+    """
+    if xinit is None:
+        return manifold.init_point()
+    return as_matrix(xinit, manifold._n, manifold._p, "xinit")
+
+
+def slpg_smooth(
     obj_fun: ObjFun,
     manifold: Stiefel,
-    Xinit: Matrix | None = None,  # noqa: N803
+    xinit: Matrix | None = None,
     maxit: int = 100,
     gtol: float = 1e-5,
     post_process: bool = True,  # noqa: FBT001, FBT002
@@ -40,12 +58,12 @@ def SLPG_smooth(  # noqa: N802
     r"""Minimize a smooth objective over the Stiefel manifold.
 
     Args:
-        obj_fun: Callable mapping ``X`` to ``(fval, grad)``, where
+        obj_fun: Callable mapping ``x`` to ``(fval, grad)``, where
             ``grad`` is the Euclidean gradient. Returning both at once
             is usually much cheaper than computing them separately.
         manifold: The :class:`~smopt.manifold.Stiefel` instance fixing
             the dimensions.
-        Xinit: Starting point. A random feasible point is drawn when it
+        xinit: Starting point. A random feasible point is drawn when it
             is omitted.
         maxit: Maximum number of iterations.
         gtol: Stationarity tolerance that stops the iteration.
@@ -62,28 +80,21 @@ def SLPG_smooth(  # noqa: N802
 
     Examples:
         >>> import numpy as np
-        >>> from smopt import SLPG_smooth, Stiefel
-        >>> M = Stiefel(6, 2)
-        >>> A = np.diag([5.0, 4.0, 3.0, 2.0, 1.0, 0.0])
-        >>> def obj(X):
-        ...     return float(np.sum(X * (A @ X))), 2.0 * (A @ X)
-        >>> X0 = np.arange(12.0).reshape(6, 2)
-        >>> X, out = SLPG_smooth(obj, M, Xinit=X0, verbosity=0)
-        >>> bool(M.Feas_eval(X) < 1e-8)
+        >>> from smopt import Stiefel, slpg_smooth
+        >>> manifold = Stiefel(6, 2)
+        >>> a = np.diag([5.0, 4.0, 3.0, 2.0, 1.0, 0.0])
+        >>> def obj(x):
+        ...     return float(np.sum(x * (a @ x))), 2.0 * (a @ x)
+        >>> x0 = np.arange(12.0).reshape(6, 2)
+        >>> x, out = slpg_smooth(obj, manifold, xinit=x0, verbosity=0)
+        >>> bool(manifold.feas_eval(x) < 1e-8)
         True
     """
     maxit = check_maxit(maxit)
     n, p = manifold._n, manifold._p
-    # A caller supplied starting point is used as given; only the
-    # default one is drawn and orthonormalized.
-    x0 = (
-        manifold.Init_point()
-        if Xinit is None
-        else as_matrix(Xinit, n, p, "Xinit")
-    )
 
     x, nit, fvals, kkts, feasv, fval, kkt, fea = _smopt.smslps(
-        x0,
+        _start(manifold, xinit),
         maxit,
         gtol,
         int(post_process),
@@ -93,10 +104,10 @@ def SLPG_smooth(  # noqa: N802
     return x, output_dict(nit, fvals, kkts, feasv, fval, kkt, fea)
 
 
-def SLPG(  # noqa: N802
+def slpg(
     obj_fun: ObjFun,
     manifold: Stiefel,
-    Xinit: Matrix | None = None,  # noqa: N803
+    xinit: Matrix | None = None,
     maxit: int = 100,
     prox: Prox | None = None,
     gtol: float = 1e-5,
@@ -104,7 +115,7 @@ def SLPG(  # noqa: N802
     verbosity: int = 2,
     **kwargs: Any,  # noqa: ANN401
 ) -> tuple[Matrix, dict[str, object]]:
-    r"""Minimize ``f(X) + r(X)`` over the Stiefel manifold.
+    r"""Minimize ``f(x) + r(x)`` over the Stiefel manifold.
 
     The regularizer ``r`` is reached only through its proximal
     operator. The multiplier of the orthogonality constraint is tracked
@@ -112,15 +123,15 @@ def SLPG(  # noqa: N802
     be tuned.
 
     Args:
-        obj_fun: Callable mapping ``X`` to ``(fval, grad)`` for the
+        obj_fun: Callable mapping ``x`` to ``(fval, grad)`` for the
             smooth part ``f``.
         manifold: The :class:`~smopt.manifold.Stiefel` instance fixing
             the dimensions.
-        Xinit: Starting point. A random feasible point is drawn when it
+        xinit: Starting point. A random feasible point is drawn when it
             is omitted.
         maxit: Maximum number of iterations.
-        prox: Callable mapping ``(X, eta)`` to the minimizer of
-            ``||Y - X||_F^2 / (2 eta) + r(Y)``. Defaults to the identity,
+        prox: Callable mapping ``(x, eta)`` to the minimizer of
+            ``||y - x||_F^2 / (2 eta) + r(y)``. Defaults to the identity,
             which recovers the smooth case.
         gtol: Stationarity tolerance that stops the iteration.
         post_process: Whether to round the final iterate onto the
@@ -136,13 +147,6 @@ def SLPG(  # noqa: N802
     """
     maxit = check_maxit(maxit)
     n, p = manifold._n, manifold._p
-    # A caller supplied starting point is used as given; only the
-    # default one is drawn and orthonormalized.
-    x0 = (
-        manifold.Init_point()
-        if Xinit is None
-        else as_matrix(Xinit, n, p, "Xinit")
-    )
 
     if prox is None:
 
@@ -150,7 +154,7 @@ def SLPG(  # noqa: N802
             return x
 
     x, nit, fvals, kkts, feasv, fval, kkt, fea = _smopt.smslpg(
-        x0,
+        _start(manifold, xinit),
         maxit,
         gtol,
         int(post_process),
@@ -161,10 +165,10 @@ def SLPG(  # noqa: N802
     return x, output_dict(nit, fvals, kkts, feasv, fval, kkt, fea)
 
 
-def SLPG_l21(  # noqa: N802
+def slpg_l21(
     obj_fun: ObjFun,
     manifold: Stiefel,
-    Xinit: Matrix | None = None,  # noqa: N803
+    xinit: Matrix | None = None,
     maxit: int = 100,
     gamma: float = 0,
     gtol: float = 1e-5,
@@ -172,18 +176,18 @@ def SLPG_l21(  # noqa: N802
     verbosity: int = 2,
     **kwargs: Any,  # noqa: ANN401
 ) -> tuple[Matrix, dict[str, object]]:
-    r"""Minimize ``f(X) + gamma ||X||_{2,1}`` over the Stiefel manifold.
+    r"""Minimize ``f(x) + gamma ||x||_{2,1}`` over the Stiefel manifold.
 
     The row-sparsity inducing :math:`\ell_{2,1}` norm has a proximal
     operator and a constraint multiplier available in closed form, so
     this driver needs no inner iteration.
 
     Args:
-        obj_fun: Callable mapping ``X`` to ``(fval, grad)`` for the
+        obj_fun: Callable mapping ``x`` to ``(fval, grad)`` for the
             smooth part ``f``.
         manifold: The :class:`~smopt.manifold.Stiefel` instance fixing
             the dimensions.
-        Xinit: Starting point. A random feasible point is drawn when it
+        xinit: Starting point. A random feasible point is drawn when it
             is omitted.
         maxit: Maximum number of iterations.
         gamma: Weight of the regularization term.
@@ -201,16 +205,9 @@ def SLPG_l21(  # noqa: N802
     """
     maxit = check_maxit(maxit)
     n, p = manifold._n, manifold._p
-    # A caller supplied starting point is used as given; only the
-    # default one is drawn and orthonormalized.
-    x0 = (
-        manifold.Init_point()
-        if Xinit is None
-        else as_matrix(Xinit, n, p, "Xinit")
-    )
 
     x, nit, fvals, kkts, feasv, fval, kkt, fea = _smopt.smsl21(
-        x0,
+        _start(manifold, xinit),
         maxit,
         gamma,
         gtol,
@@ -221,4 +218,4 @@ def SLPG_l21(  # noqa: N802
     return x, output_dict(nit, fvals, kkts, feasv, fval, kkt, fea)
 
 
-__all__: list[str] = ["SLPG", "SLPG_l21", "SLPG_smooth"]
+__all__: list[str] = ["slpg", "slpg_l21", "slpg_smooth"]

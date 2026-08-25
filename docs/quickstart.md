@@ -26,7 +26,7 @@ import numpy as np
 from scipy.sparse import diags
 from scipy.sparse.linalg import spsolve
 
-from smopt import SLPG_smooth, Stiefel
+from smopt import slpg_smooth, Stiefel
 
 n, p, alpha = 1000, 10, 1.0
 M = Stiefel(n, p)
@@ -43,7 +43,7 @@ def obj_fun(X):
     return fval, grad
 
 
-X, out = SLPG_smooth(obj_fun, M)
+X, out = slpg_smooth(obj_fun, M)
 ```
 
 !!! note
@@ -82,7 +82,7 @@ shape.
 ### 3. Run a solver
 
 ```python
-X, out = SLPG_smooth(obj_fun, M)
+X, out = slpg_smooth(obj_fun, M)
 ```
 
 `X` is the solution and `out` is a dictionary of log information:
@@ -91,7 +91,7 @@ X, out = SLPG_smooth(obj_fun, M)
 | --- | --- |
 | `fvals`, `kkts`, `feas` | per-iteration histories |
 | `fval`, `kkt`, `fea` | the final objective, stationarity and feasibility |
-| `beta` | the penalty `PenCF` actually used |
+| `beta` | the penalty `pencf` actually used |
 
 ## Nonsmooth problems
 
@@ -102,10 +102,10 @@ $\|Y - X\|_F^2 / (2\eta) + r(Y)$. Here is $\ell_1$ regularization built
 from the operator shipped with the package:
 
 ```python
-from smopt import SLPG, prox_l1
+from smopt import prox_l1, slpg
 
 gamma = 0.05
-X, out = SLPG(obj_fun, M, prox=lambda X, eta: prox_l1(X, eta, gamma=gamma))
+X, out = slpg(obj_fun, M, prox=lambda X, eta: prox_l1(X, eta, gamma=gamma))
 ```
 
 ### Row sparsity
@@ -114,9 +114,9 @@ For $r(X) = \gamma\|X\|_{2,1}$ use the dedicated driver, which knows the
 prox and the constraint multiplier in closed form:
 
 ```python
-from smopt import SLPG_l21
+from smopt import slpg_l21
 
-X, out = SLPG_l21(obj_fun, M, gamma=1.0)
+X, out = slpg_l21(obj_fun, M, gamma=1.0)
 ```
 
 Whole rows of `X` are driven to zero, which selects variables:
@@ -132,20 +132,20 @@ print(f"{live.sum()} of {len(live)} rows survive")
 
 | Solver | Use when |
 | --- | --- |
-| `SLPG_smooth` | the objective is smooth |
-| `SLPG` | there is a nonsmooth term with a known prox |
-| `SLPG_l21` | the nonsmooth term is $\gamma\|X\|_{2,1}$ |
-| `PenCF` | a constraint dissolving penalty method is preferred |
+| `slpg_smooth` | the objective is smooth |
+| `slpg` | there is a nonsmooth term with a known prox |
+| `slpg_l21` | the nonsmooth term is $\gamma\|X\|_{2,1}$ |
+| `pencf` | a constraint dissolving penalty method is preferred |
 
 ## Common options
 
 Every solver accepts:
 
 ```python
-X, out = SLPG_smooth(
+X, out = slpg_smooth(
     obj_fun,
     M,
-    Xinit=None,  # starting point; random feasible point if omitted
+    xinit=None,  # starting point; random feasible point if omitted
     maxit=100,  # iteration budget
     gtol=1e-5,  # stationarity tolerance
     post_process=True,  # round the answer onto the manifold
@@ -153,10 +153,10 @@ X, out = SLPG_smooth(
 )
 ```
 
-`PenCF` takes the starting point first and adds `beta`:
+`pencf` takes the starting point first and adds `beta`:
 
 ```python
-from smopt import PenCF
+from smopt import pencf
 
-X, out = PenCF(Xinit, obj_fun, M, beta=None)
+X, out = pencf(xinit, obj_fun, M, beta=None)
 ```
