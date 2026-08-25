@@ -195,7 +195,18 @@ def test_solvers_reach_the_known_minimum(
     assert out["fval"] == pytest.approx(best, rel=1e-5)
 
 
+#: PenCF lands near the optimum rather than on it. Holding the problem
+#: below fixed and varying only the starting point over 60 draws, the
+#: relative error has median 7.6e-07 and worst case 1.2e-04; a 150-seed
+#: sweep over problems too tops out at 1.0e-04, and the NumPy reference
+#: in tests/reference.py is worse still at 1.7e-04. That is the penalty
+#: method, not this port. The SLPG solvers above reach machine precision
+#: on the same instance, hence their much tighter tolerance.
+PENALTY_RTOL = 1e-3
+
+
 def test_pencf_reaches_the_known_minimum(rng: np.random.Generator) -> None:
+    """PenCF converges to the optimum to within a penalty method's reach."""
     n, p = 50, 4
     m = smopt.Stiefel(n, p)
     obj, best = eig_problem(rng, n, p)
@@ -204,8 +215,13 @@ def test_pencf_reaches_the_known_minimum(rng: np.random.Generator) -> None:
         orthonormal(rng, n, p), obj, m, maxit=3000, gtol=1e-9, verbosity=0
     )
 
+    # Feasibility is the part the method does guarantee: it holds to
+    # ~3e-15 across every instance measured, so it is asserted tightly.
     assert m.Feas_eval(x) < 1e-10
-    assert out["fval"] == pytest.approx(best, rel=1e-5)
+    assert out["fval"] == pytest.approx(best, rel=PENALTY_RTOL)
+    # A feasible point can never beat the true minimum; catching that
+    # would mean the objective and the constraint had come apart.
+    assert out["fval"] > best - 1e-8
 
 
 def test_l21_regularization_induces_row_sparsity(

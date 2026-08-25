@@ -48,29 +48,29 @@ f2py_target = custom_target(
   command: [py, f2py_runner, '@INPUT@', meson.current_build_dir(), '--lower']
 )
 
-# Windows wheels must carry the Fortran runtime, since a machine with
-# Python but no MinGW has no libgfortran to load.  The -static-* flags
-# are understood by the gfortran driver but not by gcc, and Meson would
-# otherwise link this mixed C/Fortran target with gcc, so the link
-# language is pinned below.  -static-libquadmath in particular only
-# exists from GCC 13 on, hence the capability probe rather than a
-# hardcoded list.
+# Windows wheels must carry the Fortran runtime: a machine with Python
+# but no MinGW has no libgfortran, libquadmath or libwinpthread to load,
+# and the extension simply fails to import.
+#
+# -static is what actually achieves that. The -static-lib* flags cover
+# only the libraries named, and the gfortran driver appends its own -l
+# entries after our link_args, by which point -Wl,-Bdynamic is in effect
+# again -- so a trailing -lwinpthread still resolved against the DLL.
+# -static sets static resolution for every -l the driver adds, including
+# those trailing ones. Import libraries such as libmsvcrt.a and the
+# Python one are unaffected, since they are import stubs either way.
+#
+# These are gfortran driver flags, and Meson would otherwise link this
+# mixed C/Fortran target with gcc, hence the pinned link language below.
 fc = meson.get_compiler('fortran')
 
 if host_machine.system() == 'windows'
-  static_runtime = ['-Wl,-Bstatic', '-lwinpthread', '-Wl,-Bdynamic']
-  if not fc.has_link_argument('-static-libquadmath')
-    # libgfortran pulls in libquadmath, so without this the wheel would
-    # still ask for libquadmath-0.dll at import time.
-    static_runtime = ['-Wl,-Bstatic', '-lquadmath', '-lwinpthread',
-                      '-Wl,-Bdynamic']
-  endif
-
   fortran_link_args = fc.get_supported_link_arguments([
+    '-static',
     '-static-libgfortran',
     '-static-libgcc',
     '-static-libquadmath',
-  ]) + static_runtime
+  ])
 else
   fortran_link_args = []
 endif
