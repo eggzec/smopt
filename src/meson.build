@@ -49,16 +49,20 @@ f2py_target = custom_target(
 )
 
 # Windows wheels must carry the Fortran runtime: a machine with Python
-# but no MinGW has no libgfortran, libquadmath or libwinpthread to load,
-# and the extension simply fails to import.
+# but no MinGW has no libgfortran, libquadmath or libwinpthread to load.
+# Note that having them on PATH is not enough either -- CPython 3.8 and
+# later do not search PATH when resolving an extension's dependencies --
+# so they have to be linked in, not merely present.
 #
-# -static is what actually achieves that. The -static-lib* flags cover
-# only the libraries named, and the gfortran driver appends its own -l
-# entries after our link_args, by which point -Wl,-Bdynamic is in effect
-# again -- so a trailing -lwinpthread still resolved against the DLL.
-# -static sets static resolution for every -l the driver adds, including
-# those trailing ones. Import libraries such as libmsvcrt.a and the
-# Python one are unaffected, since they are import stubs either way.
+# The -static-lib* flags cover the libraries they name. libwinpthread
+# needs more than that: libgfortran.a refers to it, and the gfortran
+# driver appends its own -lwinpthread from the spec file after every
+# argument Meson passes, at which point the linker is back in dynamic
+# mode and picks up the DLL. Even plain -static failed to prevent that
+# on the MinGW-Builds UCRT toolchain used by the CI runners. Pulling the
+# archive in with --whole-archive defines those symbols unconditionally
+# and independently of ordering, so the trailing -lwinpthread finds
+# nothing left to import.
 #
 # These are gfortran driver flags, and Meson would otherwise link this
 # mixed C/Fortran target with gcc, hence the pinned link language below.
@@ -66,11 +70,14 @@ fc = meson.get_compiler('fortran')
 
 if host_machine.system() == 'windows'
   fortran_link_args = fc.get_supported_link_arguments([
-    '-static',
     '-static-libgfortran',
     '-static-libgcc',
     '-static-libquadmath',
-  ])
+  ]) + [
+    '-Wl,--whole-archive,-Bstatic',
+    '-lwinpthread',
+    '-Wl,--no-whole-archive,-Bdynamic',
+  ]
 else
   fortran_link_args = []
 endif
