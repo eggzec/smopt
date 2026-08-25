@@ -1,15 +1,58 @@
-# <Project Name>
+# smopt
 
-**<Project Description>**
+**Stiefel manifold optimization, with all numerics in Fortran 77**
 
-<Project Description>
+`smopt` minimizes a smooth function, optionally plus a nonsmooth
+regularizer, over the set of matrices with orthonormal columns:
+
+$$
+\min_{X \in \mathbb{R}^{n\times p}} f(X) + r(X)
+\quad \text{subject to} \quad X^\top X = I_p.
+$$
 
 ## Overview
 
+The solvers are **penalty-free first-order methods**. Rather than
+retracting along geodesics, they work in the ambient space and dissolve
+the orthogonality constraint with a cheap feasibility restoring map, so
+an iteration costs little more than a gradient evaluation and a couple
+of small matrix products.
+
+Everything numerical — the manifold geometry, the proximal operators,
+the Barzilai-Borwein step sizes and the solver loops themselves — is
+implemented in Fortran 77 and reached through f2py. Python supplies the
+objective through a callback and handles reporting; NumPy is the only
+runtime dependency.
+
+```python
+import numpy as np
+from smopt import SLPG_smooth, Stiefel
+
+M = Stiefel(1000, 10)
+A = np.diag(np.arange(1000, dtype=float))
+
+
+def obj_fun(X):
+    AX = A @ X
+    return float(np.sum(X * AX)), 2.0 * AX
+
+
+X, out = SLPG_smooth(obj_fun, M)
+```
+
+## Solvers
+
+| Name | Use when |
+| --- | --- |
+| `SLPG_smooth` | the objective is smooth |
+| `SLPG` | there is a nonsmooth term with a known proximal operator |
+| `SLPG_l21` | the nonsmooth term is $\gamma\|X\|_{2,1}$ |
+| `PenCF` | a constraint dissolving penalty method is preferred |
+
 ## Documentation
 
-- [Theory](theory.md) - mathematical background, hierarchical basis, algorithms
+- [Theory](theory.md) - the manifold, the constraint dissolving map, the algorithms
 - [Installation](installation.md) - installation guide
 - [Quickstart](quickstart.md) - runnable examples
-- [API Reference](api.md) - class and function signature and arguments
+- [API Reference](api.md) - class and function signatures and arguments
 - [References](references.md) - literature citations

@@ -1,0 +1,280 @@
+!    -*- f90 -*-
+! f2py signature file for the SMOPT Fortran 77 core.
+!
+! Every workspace array is declared intent(cache,hide) so that it is
+! allocated by f2py and never appears in the Python signature.  The
+! objective, the proximal operator and the progress logger are Python
+! callbacks; matrices cross the boundary flattened in column major
+! order, which is how the Fortran side stores them anyway.
+
+python module __user__routines
+    interface
+        subroutine objfun(np,x,f,g)
+            integer intent(in) :: np
+            double precision dimension(np),intent(in) :: x
+            double precision intent(out) :: f
+            double precision dimension(np),intent(out),depend(np) :: g
+        end subroutine objfun
+        subroutine proxfn(np,x,eta,y)
+            integer intent(in) :: np
+            double precision dimension(np),intent(in) :: x
+            double precision intent(in) :: eta
+            double precision dimension(np),intent(out),depend(np) :: y
+        end subroutine proxfn
+        subroutine logfun(it,fval,kkt,fea,stage)
+            integer intent(in) :: it
+            double precision intent(in) :: fval
+            double precision intent(in) :: kkt
+            double precision intent(in) :: fea
+            integer intent(in) :: stage
+        end subroutine logfun
+    end interface
+end python module __user__routines
+
+python module _smopt
+    interface
+
+        subroutine smsymm(p,a)
+            integer intent(hide),depend(a) :: p = shape(a,0)
+            double precision dimension(p,p),intent(in,out,copy) :: a
+        end subroutine smsymm
+
+        subroutine smcmap(n,p,x,c)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision dimension(p,p),intent(out),depend(p) :: c
+        end subroutine smcmap
+
+        double precision function smfeas(n,p,x,wp)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp
+        end function smfeas
+
+        subroutine smja(n,p,x,g,r,wp)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision dimension(n,p),intent(in),depend(n,p) :: g
+            double precision dimension(n,p),intent(out),depend(n,p) :: r
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp
+        end subroutine smja
+
+        subroutine smjc(n,p,x,lam,r,wp)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision dimension(p,p),intent(in),depend(p) :: lam
+            double precision dimension(n,p),intent(out),depend(n,p) :: r
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp
+        end subroutine smjc
+
+        subroutine smjct(n,p,x,d,r)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision dimension(n,p),intent(in),depend(n,p) :: d
+            double precision dimension(p,p),intent(out),depend(p) :: r
+        end subroutine smjct
+
+        subroutine smamap(n,p,x,wp1,wp2,row)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp1
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp2
+            double precision dimension(p),intent(cache,hide),depend(p) :: row
+        end subroutine smamap
+
+        subroutine smfix(n,p,x,wp1,wp2,row)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp1
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp2
+            double precision dimension(p),intent(cache,hide),depend(p) :: row
+        end subroutine smfix
+
+        subroutine smpost(n,p,x,wp1,wp2,wp3,w,row)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp1
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp2
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp3
+            double precision dimension(p),intent(cache,hide),depend(p) :: w
+            double precision dimension(p),intent(cache,hide),depend(p) :: row
+        end subroutine smpost
+
+        subroutine sminit(n,p,x,wp)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp
+        end subroutine sminit
+
+        subroutine smpl1(n,p,x,eta,gam,y)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision intent(in) :: eta
+            double precision intent(in) :: gam
+            double precision dimension(n,p),intent(out),depend(n,p) :: y
+        end subroutine smpl1
+
+        subroutine smpl21(n,p,x,eta,gam,eps,y)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision intent(in) :: eta
+            double precision intent(in) :: gam
+            double precision intent(in) :: eps
+            double precision dimension(n,p),intent(out),depend(n,p) :: y
+        end subroutine smpl21
+
+        subroutine smlm21(n,p,x,gam,lam)
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in) :: x
+            double precision intent(in) :: gam
+            double precision dimension(p,p),intent(out),depend(p) :: lam
+        end subroutine smlm21
+
+        subroutine smslps(n,p,x,maxit,gtol,ipost,objfun,logfun,nit,fvals,kkts,feasv,fval,kkt,fea,gf,gr,grp,s,y,xp,wp1,wp2,wp3,weig,row)
+            use __user__routines
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            integer intent(in) :: maxit
+            double precision intent(in) :: gtol
+            integer intent(in) :: ipost
+            external objfun
+            external logfun
+            integer intent(out) :: nit
+            double precision dimension(maxit),intent(out),depend(maxit) :: fvals
+            double precision dimension(maxit),intent(out),depend(maxit) :: kkts
+            double precision dimension(maxit),intent(out),depend(maxit) :: feasv
+            double precision intent(out) :: fval
+            double precision intent(out) :: kkt
+            double precision intent(out) :: fea
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gf
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gr
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: grp
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: s
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: y
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: xp
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp1
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp2
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp3
+            double precision dimension(p),intent(cache,hide),depend(p) :: weig
+            double precision dimension(p),intent(cache,hide),depend(p) :: row
+        end subroutine smslps
+
+        subroutine smslpg(n,p,x,maxit,gtol,ipost,objfun,proxfn,logfun,nit,fvals,kkts,feasv,fval,kkt,fea,gf,gr,grad,grdp,s,y,xp,z,xt,dx,lam,wp1,wp2,wp3,weig,row,steps)
+            use __user__routines
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            integer intent(in) :: maxit
+            double precision intent(in) :: gtol
+            integer intent(in) :: ipost
+            external objfun
+            external proxfn
+            external logfun
+            integer intent(out) :: nit
+            double precision dimension(maxit),intent(out),depend(maxit) :: fvals
+            double precision dimension(maxit),intent(out),depend(maxit) :: kkts
+            double precision dimension(maxit),intent(out),depend(maxit) :: feasv
+            double precision intent(out) :: fval
+            double precision intent(out) :: kkt
+            double precision intent(out) :: fea
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gf
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gr
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: grad
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: grdp
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: s
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: y
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: xp
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: z
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: xt
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: dx
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: lam
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp1
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp2
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp3
+            double precision dimension(p),intent(cache,hide),depend(p) :: weig
+            double precision dimension(p),intent(cache,hide),depend(p) :: row
+            double precision dimension(maxit),intent(cache,hide),depend(maxit) :: steps
+        end subroutine smslpg
+
+        subroutine smsl21(n,p,x,maxit,gam,gtol,ipost,objfun,logfun,nit,fvals,kkts,feasv,fval,kkt,fea,gf,gr,grad,grdp,s,y,xp,xt,lam,wp1,wp2,wp3,weig,row)
+            use __user__routines
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            integer intent(in) :: maxit
+            double precision intent(in) :: gam
+            double precision intent(in) :: gtol
+            integer intent(in) :: ipost
+            external objfun
+            external logfun
+            integer intent(out) :: nit
+            double precision dimension(maxit),intent(out),depend(maxit) :: fvals
+            double precision dimension(maxit),intent(out),depend(maxit) :: kkts
+            double precision dimension(maxit),intent(out),depend(maxit) :: feasv
+            double precision intent(out) :: fval
+            double precision intent(out) :: kkt
+            double precision intent(out) :: fea
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gf
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gr
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: grad
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: grdp
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: s
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: y
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: xp
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: xt
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: lam
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp1
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp2
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp3
+            double precision dimension(p),intent(cache,hide),depend(p) :: weig
+            double precision dimension(p),intent(cache,hide),depend(p) :: row
+        end subroutine smsl21
+
+        subroutine smpcf(n,p,x,beta,maxit,gtol,ipost,objfun,logfun,nit,fvals,kkts,feasv,fval,kkt,fea,betout,gf,gr,gc,grp,s,y,xp,wp1,wp2,wp3,weig,row)
+            use __user__routines
+            integer intent(hide),depend(x) :: n = shape(x,0)
+            integer intent(hide),depend(x) :: p = shape(x,1)
+            double precision dimension(n,p),intent(in,out,copy) :: x
+            double precision intent(in) :: beta
+            integer intent(in) :: maxit
+            double precision intent(in) :: gtol
+            integer intent(in) :: ipost
+            external objfun
+            external logfun
+            integer intent(out) :: nit
+            double precision dimension(maxit),intent(out),depend(maxit) :: fvals
+            double precision dimension(maxit),intent(out),depend(maxit) :: kkts
+            double precision dimension(maxit),intent(out),depend(maxit) :: feasv
+            double precision intent(out) :: fval
+            double precision intent(out) :: kkt
+            double precision intent(out) :: fea
+            double precision intent(out) :: betout
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gf
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gr
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: gc
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: grp
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: s
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: y
+            double precision dimension(n,p),intent(cache,hide),depend(n,p) :: xp
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp1
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp2
+            double precision dimension(p,p),intent(cache,hide),depend(p) :: wp3
+            double precision dimension(p),intent(cache,hide),depend(p) :: weig
+            double precision dimension(p),intent(cache,hide),depend(p) :: row
+        end subroutine smpcf
+
+    end interface
+end python module _smopt

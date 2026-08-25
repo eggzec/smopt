@@ -1,11 +1,11 @@
-site_name: <Project Name>
-site_description: <Project Description>
-site_url: https://eggzec.github.io/<Project Name>/
+site_name: smopt
+site_description: Stiefel manifold optimization with all numerics in Fortran 77
+site_url: https://eggzec.github.io/smopt/
 docs_dir: docs
 site_dir: site
 
-repo_name: eggzec/<Project Name>
-repo_url: https://github.com/eggzec/<Project Name>
+repo_name: eggzec/smopt
+repo_url: https://github.com/eggzec/smopt
 
 # Copyright
 copyright: Copyright &copy; 2026 eggzec
@@ -51,8 +51,8 @@ theme:
         name: Switch to light mode
 
   # Logo and favicon
-  favicon: assets/images/<Project Name>.ico
-  logo: assets/images/<Project Name>.png
+  favicon: assets/images/smopt.ico
+  logo: assets/images/smopt.png
 
   # Font configuration
   font:
@@ -101,9 +101,9 @@ extra_css:    # https://squidfunk.github.io/mkdocs-material/customization/#addit
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/eggzec/<Project Name>
+      link: https://github.com/eggzec/smopt
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/<Project Name>/
+      link: https://pypi.org/project/smopt/
 
 extra_javascript:
   - assets/javascripts/katex.js

@@ -8,9 +8,9 @@ requires = [
 build-backend = "mesonpy"
 
 [project]
-name = "<Project Name>"
+name = "smopt"
 dynamic = ["version"]
-description = "<Project Description>"
+description = "Stiefel manifold optimization with all numerics in Fortran 77"
 authors = [
     { name = "Saud Zahir", email = "m.saud.zahir@gmail.com" },
 ]
@@ -21,13 +21,16 @@ maintainers = [
 readme = "README.md"
 license = "GPL-3.0"
 keywords = [
-    "python"
+    "optimization",
+    "manifold optimization",
+    "Stiefel manifold",
+    "fortran",
+    "f2py"
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python",
     "Programming Language :: C",
     "Programming Language :: Fortran",
@@ -50,12 +53,12 @@ dependencies = [
 requires-python = ">=3.10"
 
 [project.urls]
-homepage = "https://eggzec.github.io/<Project Name>/"
-documentation = "https://eggzec.github.io/<Project Name>/"
-source = "https://github.com/eggzec/<Project Name>"
-changelog = "https://eggzec.github.io/<Project Name>/changelog/"
-releasenotes = "https://github.com/eggzec/<Project Name>/releases/latest"
-issues = "https://github.com/eggzec/<Project Name>/issues"
+homepage = "https://eggzec.github.io/smopt/"
+documentation = "https://eggzec.github.io/smopt/"
+source = "https://github.com/eggzec/smopt"
+changelog = "https://eggzec.github.io/smopt/changelog/"
+releasenotes = "https://github.com/eggzec/smopt/releases/latest"
+issues = "https://github.com/eggzec/smopt/issues"
 
 [dependency-groups]
 dev = [
@@ -79,12 +82,12 @@ test = [
 source = "vcs"
 
 [tool.hatch.build.targets.wheel]
-include = [ "/<Project Name>" ]
+include = [ "/smopt" ]
 
 [tool.ruff]
-# CI workflow definitions and the helper scripts they run are not
+# CI workflow definitions and the build helper scripts they run are not
 # part of the published package, so they are out of scope here.
-extend-exclude = [".github"]
+extend-exclude = [".github", "bin"]
 line-length = 80
 indent-width = 4
 preview = true
@@ -125,7 +128,40 @@ ignore = []
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["non-empty-init-module"]
-"tests/*.py" = []
+"src/smopt/**/*.py" = [
+    # The subpackages are one installable unit, so they reach each other
+    # with relative imports rather than by naming the distribution.
+    "relative-imports",
+    # The solver signatures are fixed by the algorithm this package
+    # ports; their arity is not ours to trim.
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    # noqa is the portable spelling, and the one every reader knows.
+    "noqa-comments",
+]
+"tests/*.py" = [
+    # A test asserts with assert.
+    "assert",
+    # Tolerances, sizes and iteration counts read better inline.
+    "magic-value-comparison",
+    # Annotating every fixture and parametrized case adds no clarity.
+    "ANN",
+    # The suite mirrors a public API that is deliberately CamelCase, and
+    # tests/reference.py is a faithful transcription of the original.
+    "invalid-function-name",
+    "invalid-argument-name",
+    "non-lowercase-variable-in-function",
+    "docstring-missing-returns",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-positional-arguments",
+    # Parametrizing over a boolean flag is the point of those tests.
+    "boolean-type-hint-positional-argument",
+    "boolean-default-value-positional-argument",
+    "no-self-use",
+    "non-augmented-assignment",
+    "compare-to-empty-string",
+]
 
 [tool.ruff.format]
 docstring-code-format = true
