@@ -72,8 +72,13 @@ jobs:
           echo "$(brew --prefix gcc)/bin" >> "$GITHUB_PATH"
           "$(brew --prefix gcc)/bin/gfortran" --version
 
+      # Without python-version every job resolves to whichever
+      # interpreter uv picks by default, so the matrix axis above was
+      # silently testing one version on all of them.
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install project
         run: uv run bin/build.py install
